@@ -313,6 +313,7 @@ export class Manager {
   private async abort(state: IssueState, reason: string): Promise<void> {
     await this.notify(state, `:x: ${reason} — issue flipped back to ready.`);
     await this.deps.setIssueLabels(state.repo, state.number, ["ready"], ["in-progress"]);
+    await this.deps.removeWorktree(state.repo, state.number);
     this.store.remove(state.repo, state.number);
     this.deps.log("error", "issue aborted", { key: issueKey(state.repo, state.number), reason });
   }
