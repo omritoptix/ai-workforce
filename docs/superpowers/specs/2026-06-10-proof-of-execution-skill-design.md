@@ -18,7 +18,7 @@ Three consumers depend on it:
 
 - **Generic, not repo-derived.** Proof techniques are domain-generic ("record a Playwright video" works for any web frontend). Skills are instruction documents; the marginal cost of covering a domain is low and target repos will change.
 - **One umbrella skill with domain reference files** over per-domain skills. The proof contract is the load-bearing part and must exist in exactly one place; domains are evidence-gathering recipes under it. Consumers reference one skill name forever; adding a domain later is a pure addition.
-- **Dedicated public `proof-artifacts` repo** for binary evidence. GitHub PR bodies cannot receive video/image uploads via `gh`/API (drag-and-drop is browser-only), and GitHub's image proxy cannot fetch raw URLs from private repos — inline rendering requires the repo to be public. It holds screenshots/videos of Omri's own app UIs; nothing secret. Fallback for a sensitive artifact: plain link instead of inline embed.
+- **Dedicated private `proof-artifacts` repo** for binary evidence. GitHub PR bodies cannot receive video/image uploads via `gh`/API (drag-and-drop is browser-only). Omri keeps the repo private, which rules out inline `![]()` embeds entirely — GitHub's image proxy (camo) fetches anonymously and cannot reach private content. Proof sections therefore use plain markdown links to GitHub file-viewer URLs (`github.com/.../blob/...`), which render images and play videos for logged-in reviewers; agents fetch artifact bytes via the authenticated contents API when needed.
 - **Mobile included but degraded.** Workers run on a headless Linux box: iOS simulators require macOS (impossible), Android emulators need KVM and are heavy for a small Hetzner server. Mobile proof = unit/snapshot test output, plus Playwright evidence for RN-web-compatible components; emulator-dependent claims go under "Not verified".
 
 ## Skill shape
@@ -51,10 +51,10 @@ The manager's structural check stays dumb: heading exists and section is non-emp
 
 ## Artifacts repo and upload script
 
-- Repo: `omritoptix/proof-artifacts`, public.
+- Repo: `omritoptix/proof-artifacts`, private.
 - Layout: `<target-repo>/<issue-N>/<file>`.
-- `scripts/upload_artifacts.sh <repo> <issue> <files...>`: shallow-clones the artifacts repo, copies files in, commits, pushes, prints the raw.githubusercontent.com URLs ready to embed. Workers never improvise git mechanics.
-- Auth: whatever `gh`/git credentials the environment already has (laptop and server both authenticated).
+- `scripts/upload_artifacts.sh <repo> <issue> <files...>`: shallow-clones the artifacts repo, copies files in, commits, pushes (rebase-retry for concurrent workers; idempotent on re-run), prints GitHub file-viewer URLs ready to link. Workers never improvise git mechanics.
+- Auth: whatever `gh`/git credentials the environment already has. On this machine that is the fine-grained PAT stored in the ai-workforce repo's gitignored `.env` — it speaks REST only (GraphQL returns 401, so `gh` porcelain like `gh issue close` fails; use `gh api`).
 
 ## Domain recipes
 
@@ -69,4 +69,4 @@ Wiring into the worker/reviewer prompt templates and the manager's structural ch
 
 ## Testing
 
-Built with the `skill-creator` skill (installed at `~/.claude/skills/skill-creator/`), then verified end-to-end: invoke the skill against a small real repo, confirm it produces a contract-conformant proof section with a really-uploaded artifact that renders inline in a GitHub comment.
+Built with the `skill-creator` skill (installed at `~/.claude/skills/skill-creator/`), then verified end-to-end: invoke the skill against a small real repo, confirm it produces a contract-conformant proof section, and confirm a really-uploaded artifact is stored and linkable (file-viewer URL in a GitHub issue, bytes retrievable via the contents API).
