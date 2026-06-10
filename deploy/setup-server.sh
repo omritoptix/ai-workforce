@@ -14,12 +14,14 @@ sudo apt-get install -y nodejs
   && sudo apt-get update && sudo apt-get install -y gh
 sudo npm install -g @anthropic-ai/claude-code
 
+# config (must come before auth so setup-token writes into the cloned dir)
+git clone https://github.com/omritoptix/claude-config.git ~/.claude
+
 # auth (interactive)
 gh auth login
 claude setup-token   # authenticates Claude Code against the Max subscription
 
-# config + code
-git clone https://github.com/omritoptix/claude-config.git ~/.claude
+# code
 git clone https://github.com/omritoptix/ai-workforce.git ~/ai-workforce
 cd ~/ai-workforce && npm install
 cp config.example.json config.json   # then edit: repos, workDir=/home/workforce/work, slackChannel
