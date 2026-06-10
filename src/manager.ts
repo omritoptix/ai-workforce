@@ -101,7 +101,20 @@ export class Manager {
   private spawnDriver(key: string, fn: () => Promise<void>): void {
     this.driving.add(key);
     fn()
-      .catch((err) => this.deps.log("error", "driver crashed", { key, err: String(err) }))
+      .catch(async (err) => {
+        this.deps.log("error", "driver crashed", { key, err: String(err) });
+        try {
+          const [repo, num] = key.split("#");
+          const state = this.store.get(repo, Number(num));
+          if (state) {
+            state.status = "escalated";
+            this.store.save(state);
+            await this.notify(state, `:rotating_light: Driver crashed: ${String(err)}\n_Session: \`claude --resume ${state.sessionId}\` in \`${state.worktree}\`_`);
+          }
+        } catch (notifyErr) {
+          this.deps.log("error", "driver crash escalation failed", { key, err: String(notifyErr) });
+        }
+      })
       .finally(() => this.driving.delete(key));
   }
 
