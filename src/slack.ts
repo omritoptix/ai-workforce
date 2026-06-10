@@ -40,7 +40,8 @@ export class SlackBridge {
       text,
       thread_ts: threadTs,
     });
-    return res.ts as string;
+    if (!res.ts) throw new Error(`slack post returned no ts: ${JSON.stringify(res)}`);
+    return res.ts;
   }
 
   async start(): Promise<void> {
