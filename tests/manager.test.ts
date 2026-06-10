@@ -12,6 +12,7 @@ const cfg: Config = {
   repos: ["o/r"],
   workDir: "/tmp/wf",
   slackChannel: "C1",
+  slackUserId: "U1",
   pollIntervalMs: 1000,
   maxReviewRounds: 3,
   sessionTimeoutMs: 1000,

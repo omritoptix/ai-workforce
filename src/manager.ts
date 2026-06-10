@@ -210,7 +210,7 @@ export class Manager {
       if (signal.kind === "verdict" && signal.approve) {
         state.status = "awaiting-final-review";
         this.store.save(state);
-        await this.notify(state, `:white_check_mark: PR #${state.prNumber} approved by reviewers — ready for your final review.`);
+        await this.notify(state, `<@${this.cfg.slackUserId}> :white_check_mark: PR #${state.prNumber} approved by reviewers — ready for your final review.`);
         return;
       }
       state.reviewRounds++;
@@ -302,7 +302,7 @@ export class Manager {
     this.store.save(state);
     await this.notify(
       state,
-      `:question: ${question}\n_Escalate: ssh to the server, then \`claude --resume ${state.sessionId}\` in \`${state.worktree}\`_`,
+      `<@${this.cfg.slackUserId}> :question: ${question}\n_Escalate: ssh to the server, then \`claude --resume ${state.sessionId}\` in \`${state.worktree}\`_`,
     );
     const key = issueKey(state.repo, state.number);
     const answer = await new Promise<string>((resolve) => this.answerWaiters.set(key, resolve));
@@ -324,7 +324,7 @@ export class Manager {
   private async escalate(state: IssueState, reason: string): Promise<void> {
     state.status = "escalated";
     this.store.save(state);
-    await this.notify(state, `:rotating_light: Escalated: ${reason}\n_Session: \`claude --resume ${state.sessionId}\` in \`${state.worktree}\`_`);
+    await this.notify(state, `<@${this.cfg.slackUserId}> :rotating_light: Escalated: ${reason}\n_Session: \`claude --resume ${state.sessionId}\` in \`${state.worktree}\`_`);
   }
 
   private async abort(state: IssueState, reason: string): Promise<void> {

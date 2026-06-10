@@ -4,6 +4,7 @@ export interface Config {
   repos: string[];
   workDir: string;
   slackChannel: string;
+  slackUserId: string;
   pollIntervalMs: number;
   maxReviewRounds: number;
   sessionTimeoutMs: number;
@@ -14,6 +15,7 @@ const KEYS: (keyof Config)[] = [
   "repos",
   "workDir",
   "slackChannel",
+  "slackUserId",
   "pollIntervalMs",
   "maxReviewRounds",
   "sessionTimeoutMs",

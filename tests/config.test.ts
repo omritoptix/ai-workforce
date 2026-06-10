@@ -8,6 +8,7 @@ const valid = {
   repos: ["o/r"],
   workDir: "/tmp/wf",
   slackChannel: "C123",
+  slackUserId: "U123",
   pollIntervalMs: 60000,
   maxReviewRounds: 3,
   sessionTimeoutMs: 3600000,
