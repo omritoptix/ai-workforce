@@ -36,6 +36,7 @@ export function issueKey(repo: string, n: number): string {
 export class Manager {
   private answerWaiters = new Map<string, (text: string) => void>();
   private driving = new Set<string>();
+  private quotaExhausted = false;
 
   constructor(
     private cfg: Config,
@@ -53,14 +54,16 @@ export class Manager {
 
   async tick(): Promise<void> {
     await this.deps.syncSkills();
-    for (const repo of this.cfg.repos) {
-      const issues = await this.deps.listOpenIssues(repo);
-      const open = new Set(issues.map((i) => i.number));
-      for (const issue of issues) {
-        const key = issueKey(repo, issue.number);
-        if (this.driving.has(key) || this.store.get(repo, issue.number)) continue;
-        if (!isDispatchable(issue, open)) continue;
-        this.spawnDriver(key, () => this.driveNew(repo, issue));
+    if (!this.quotaExhausted) {
+      for (const repo of this.cfg.repos) {
+        const issues = await this.deps.listOpenIssues(repo);
+        const open = new Set(issues.map((i) => i.number));
+        for (const issue of issues) {
+          const key = issueKey(repo, issue.number);
+          if (this.driving.has(key) || this.store.get(repo, issue.number)) continue;
+          if (!isDispatchable(issue, open)) continue;
+          this.spawnDriver(key, () => this.driveNew(repo, issue));
+        }
       }
     }
     await this.watchMerges();
@@ -246,9 +249,15 @@ export class Manager {
   }
 
   private async runWithQuota(state: IssueState, opts: RunOpts): Promise<SessionResult> {
+    let paused = false;
     while (true) {
       const result = await this.deps.run({ ...opts, timeoutMs: this.cfg.sessionTimeoutMs });
-      if (!result.quotaHit) return result;
+      if (!result.quotaHit) {
+        if (paused) this.quotaExhausted = false;
+        return result;
+      }
+      paused = true;
+      this.quotaExhausted = true;
       const resumeFrom = result.sessionId || opts.resume;
       state.pausedFrom = state.status;
       state.status = "paused";

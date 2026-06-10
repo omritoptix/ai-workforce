@@ -99,6 +99,31 @@ it("pauses on quota and retries", async () => {
   expect(calls.labels.some((l) => l.remove.includes("paused"))).toBe(true);
 });
 
+it("gates new dispatches while quota is exhausted", async () => {
+  const issues: GhIssue[] = [readyIssue];
+  const { manager, store, calls, deps } = harness(
+    [
+      { sessionId: "", text: "usage limit reached", quotaHit: true, failed: true },
+      ok("done\nPR: https://github.com/o/r/pull/5"),
+      ok("VERDICT: APPROVE", "s2"),
+      ok("done\nPR: https://github.com/o/r/pull/6", "s3"),
+    ],
+    issues,
+  );
+  let releaseSleep!: () => void;
+  deps.sleep = () => new Promise((resolve) => (releaseSleep = resolve));
+  await manager.tick();
+  await vi.waitFor(() => expect(calls.labels.some((l) => l.add.includes("paused"))).toBe(true));
+  issues.push({ ...readyIssue, number: 8 });
+  await manager.tick();
+  expect(calls.run.length).toBe(1);
+  expect(store.get("o/r", 8)).toBeUndefined();
+  releaseSleep();
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+  await manager.tick();
+  await vi.waitFor(() => expect(store.get("o/r", 8)?.status).toBe("awaiting-final-review"));
+});
+
 it("normalizes paused state on recover and resumes the underlying phase", async () => {
   const { manager, store, calls } = harness([
     ok("done\nPR: https://github.com/o/r/pull/5", "s2"),
