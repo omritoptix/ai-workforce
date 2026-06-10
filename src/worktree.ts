@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { execa } from "execa";
 import { branchName } from "./prompts.js";
 
@@ -7,13 +7,26 @@ function repoDirName(repo: string): string {
   return repo.replace("/", "__");
 }
 
+// Concurrent dispatches for the same repo must share one clone instead of
+// racing `gh repo clone` into the same destination.
+const cloning = new Map<string, Promise<void>>();
+
 export async function ensureClone(workDir: string, repo: string): Promise<string> {
   const dir = join(workDir, "repos", repoDirName(repo));
   if (!existsSync(dir)) {
-    mkdirSync(join(workDir, "repos"), { recursive: true });
-    await execa("gh", ["repo", "clone", repo, dir]);
+    let inflight = cloning.get(dir);
+    if (!inflight) {
+      inflight = clone(repo, dir).finally(() => cloning.delete(dir));
+      cloning.set(dir, inflight);
+    }
+    await inflight;
   }
   return dir;
+}
+
+async function clone(repo: string, dir: string): Promise<void> {
+  mkdirSync(dirname(dir), { recursive: true });
+  await execa("gh", ["repo", "clone", repo, dir]);
 }
 
 export async function createWorktree(workDir: string, repo: string, issue: number): Promise<string> {
