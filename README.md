@@ -19,11 +19,29 @@ human-in-the-loop channel. Design: `docs/superpowers/specs/2026-06-10-ai-workfor
 
 Quota limits pause work (`paused` label) and auto-resume by priority. Issues that exceed
 the review cap or hit unrecoverable errors are escalated (Slack ping, left for the owner).
+After resolving an escalated issue manually, delete its state file under `<workDir>/state/`
+(and its worktree under `<workDir>/worktrees/` if you're done with it).
+
+The Slack channel must be **public** (the app manifest only subscribes to public-channel
+messages). `slackUserId` in the config is your Slack member ID, used to @mention you on
+questions, escalations, and final-review pings.
 
 ## Layout
 
 - `src/` — the manager daemon (TypeScript, run with `npm start -- config.json`)
 - `deploy/` — Slack manifest, server bootstrap, systemd unit
+
+## Onboarding a repo
+
+Before the workforce can work a repo, create the required labels once:
+
+```bash
+for l in ready in-progress paused p0 p1 p2 model:opus model:sonnet model:haiku; do
+  gh label create "$l" --repo <owner/repo> 2>/dev/null || true
+done
+```
+
+Without this, the first dispatch fails on `--add-label`.
 
 ## Development
 
