@@ -179,3 +179,60 @@ it("recover routes awaiting-answer+prNumber through reviewPhase not abort", asyn
   manager.onSlackReply(issueKey("o/r", 7), "use postgres");
   await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
 });
+
+it("escalates after maxReviewRounds rejections", async () => {
+  const { manager, store, calls } = harness([
+    ok("done\nPR: https://github.com/o/r/pull/5"),
+    ok("VERDICT: REQUEST_CHANGES", "r1"),
+    ok("fixed\nPR: https://github.com/o/r/pull/5", "s2"),
+    ok("VERDICT: REQUEST_CHANGES", "r2"),
+    ok("fixed\nPR: https://github.com/o/r/pull/5", "s3"),
+    ok("VERDICT: REQUEST_CHANGES", "r3"),
+  ]);
+  await manager.tick();
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("escalated"));
+  expect(calls.slack.some((t) => t.includes("Escalated"))).toBe(true);
+});
+
+it("cleans up when an awaiting-final-review PR is merged", async () => {
+  const h = harness([], []);
+  h.store.save({
+    repo: "o/r",
+    number: 7,
+    title: "t",
+    model: "sonnet",
+    priority: 1,
+    status: "awaiting-final-review",
+    prNumber: 5,
+    reviewRounds: 0,
+    slackThreadTs: "ts1",
+  });
+  h.deps.getPR = async () => ({ body: "## Proof of execution\nx", mergedAt: "2026-06-10T00:00:00Z" });
+  await h.manager.tick();
+  expect(h.store.get("o/r", 7)).toBeUndefined();
+  expect(h.calls.slack.some((t) => t.includes("merged"))).toBe(true);
+});
+
+it("recovers an awaiting-answer issue by re-posting the question", async () => {
+  const { manager, store, calls } = harness([
+    ok("done\nPR: https://github.com/o/r/pull/5", "s2"),
+    ok("VERDICT: APPROVE", "r1"),
+  ]);
+  store.save({
+    repo: "o/r",
+    number: 7,
+    title: "t",
+    model: "sonnet",
+    priority: 1,
+    status: "awaiting-answer",
+    sessionId: "s1",
+    reviewRounds: 0,
+    worktree: "/tmp/wt",
+    slackThreadTs: "ts1",
+    lastQuestion: "which db?",
+  });
+  await manager.recover();
+  await vi.waitFor(() => expect(calls.slack.some((t) => t.includes("which db?"))).toBe(true));
+  manager.onSlackReply(issueKey("o/r", 7), "postgres");
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+});
