@@ -83,7 +83,7 @@ export class Manager {
       if (status === "working") {
         if (state.prNumber) {
           this.spawnDriver(key, async () => {
-            await this.runWorker(state, "The manager restarted. Continue addressing the PR review feedback per your original instructions.");
+            await this.drainQuestions(state, fixPrompt("The manager restarted. Continue addressing the PR review feedback per your original instructions."));
             await this.reviewPhase(state);
           });
         } else {
@@ -101,7 +101,7 @@ export class Manager {
         if (state.prNumber) {
           this.spawnDriver(key, async () => {
             const answer = await this.askOmri(state, state.lastQuestion ?? "(question lost on restart — resume the session to see it)");
-            const result = await this.runWorker(state, answerPrompt(answer));
+            await this.drainQuestions(state, answerPrompt(answer));
             await this.reviewPhase(state);
           });
         } else {
@@ -198,7 +198,7 @@ export class Manager {
           return;
         }
         proofRetried = true;
-        await this.runFix(state, "The PR body is missing a non-empty '## Proof of execution' section. Produce the evidence and update the PR body with gh pr edit.");
+        await this.drainQuestions(state, fixPrompt("The PR body is missing a non-empty '## Proof of execution' section. Produce the evidence and update the PR body with gh pr edit."));
         continue;
       }
       const review = await this.runWithQuota(state, {
@@ -219,12 +219,14 @@ export class Manager {
         await this.escalate(state, `Review loop hit ${state.reviewRounds} rounds on PR #${state.prNumber} without approval.`);
         return;
       }
-      await this.runFix(state, `Reviewers requested changes on PR #${state.prNumber}. Read the review comments with gh, address them, and push.`);
+      await this.drainQuestions(state, fixPrompt(`Reviewers requested changes on PR #${state.prNumber}. Read the review comments with gh, address them, and push.`));
     }
   }
 
-  private async runFix(state: IssueState, instruction: string): Promise<void> {
-    let result = await this.runWorker(state, fixPrompt(instruction));
+  // Runs the worker with `prompt`, then drains any QUESTION signals before returning.
+  // Leaves state.status = "reviewing" so callers re-entering reviewPhase are consistent.
+  private async drainQuestions(state: IssueState, prompt: string): Promise<void> {
+    let result = await this.runWorker(state, prompt);
     let signal = parseSignal(result.text);
     while (signal.kind === "question") {
       const answer = await this.askOmri(state, signal.text);
