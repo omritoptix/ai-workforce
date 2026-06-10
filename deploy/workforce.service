@@ -1,0 +1,15 @@
+[Unit]
+Description=AI workforce manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=workforce
+WorkingDirectory=/home/workforce/ai-workforce
+EnvironmentFile=/home/workforce/workforce.env
+ExecStart=/usr/bin/npm start -- /home/workforce/ai-workforce/config.json
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
