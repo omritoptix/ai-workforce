@@ -253,22 +253,26 @@ export class Manager {
     while (true) {
       const result = await this.deps.run({ ...opts, timeoutMs: this.cfg.sessionTimeoutMs });
       if (!result.quotaHit) {
-        if (paused) this.quotaExhausted = false;
+        if (paused) {
+          this.quotaExhausted = false;
+          state.status = state.pausedFrom!;
+          delete state.pausedFrom;
+          this.store.save(state);
+          await this.deps.setIssueLabels(state.repo, state.number, [], ["paused"]);
+        }
         return result;
       }
-      paused = true;
       this.quotaExhausted = true;
       const resumeFrom = result.sessionId || opts.resume;
-      state.pausedFrom = state.status;
-      state.status = "paused";
-      this.store.save(state);
-      await this.deps.setIssueLabels(state.repo, state.number, ["paused"], []);
-      await this.notify(state, `:hourglass: Paused on usage limit (p${state.priority}). Will retry automatically.`);
+      if (!paused) {
+        paused = true;
+        state.pausedFrom = state.status;
+        state.status = "paused";
+        this.store.save(state);
+        await this.deps.setIssueLabels(state.repo, state.number, ["paused"], []);
+        await this.notify(state, `:hourglass: Paused on usage limit (p${state.priority}). Will retry automatically.`);
+      }
       await this.deps.sleep(this.cfg.quotaRetryMs + state.priority * 60_000);
-      state.status = state.pausedFrom!;
-      delete state.pausedFrom;
-      this.store.save(state);
-      await this.deps.setIssueLabels(state.repo, state.number, [], ["paused"]);
       if (resumeFrom) {
         opts = { prompt: "Continue.", cwd: opts.cwd, model: opts.model, resume: resumeFrom };
       }
