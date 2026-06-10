@@ -1,0 +1,9 @@
+{
+  "repos": ["dymensionxyz/example-repo"],
+  "workDir": "/home/workforce/work",
+  "slackChannel": "C0XXXXXXX",
+  "pollIntervalMs": 60000,
+  "maxReviewRounds": 3,
+  "sessionTimeoutMs": 3600000,
+  "quotaRetryMs": 900000
+}
