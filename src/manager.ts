@@ -90,6 +90,11 @@ export class Manager {
             await this.drainQuestions(state, fixPrompt("The manager restarted. Continue addressing the PR review feedback per your original instructions."));
             await this.reviewPhase(state);
           });
+        } else if (!state.sessionId) {
+          // Daemon died before the first session call returned: there is no
+          // session to resume and a fresh one would have zero issue context.
+          // Abort so the next tick re-dispatches with the full worker prompt.
+          this.spawnDriver(key, () => this.abort(state, "Manager restarted before the worker session was established."));
         } else {
           this.spawnDriver(key, async () => {
             const result = await this.runWorker(

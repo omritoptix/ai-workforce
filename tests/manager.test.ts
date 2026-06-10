@@ -180,6 +180,24 @@ it("recover routes awaiting-answer+prNumber through reviewPhase not abort", asyn
   await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
 });
 
+it("recover aborts a session-less working issue instead of resuming into a void", async () => {
+  const { manager, store, calls } = harness([ok("should never run")]);
+  store.save({
+    repo: "o/r",
+    number: 7,
+    title: "do thing",
+    model: "sonnet",
+    priority: 1,
+    status: "working",
+    reviewRounds: 0,
+    worktree: "/tmp/wt",
+  });
+  await manager.recover();
+  await vi.waitFor(() => expect(store.get("o/r", 7)).toBeUndefined());
+  expect(calls.labels.some((l) => l.add.includes("ready") && l.remove.includes("in-progress"))).toBe(true);
+  expect(calls.run).toEqual([]);
+});
+
 it("escalates after maxReviewRounds rejections", async () => {
   const { manager, store, calls } = harness([
     ok("done\nPR: https://github.com/o/r/pull/5"),
