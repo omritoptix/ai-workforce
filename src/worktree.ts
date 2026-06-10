@@ -25,6 +25,7 @@ export async function createWorktree(workDir: string, repo: string, issue: numbe
   const { stdout: head } = await execa("git", [
     "-C", clone, "symbolic-ref", "refs/remotes/origin/HEAD", "--short",
   ]);
+  await execa("git", ["-C", clone, "branch", "-D", branchName(issue)]).catch(() => {});
   await execa("git", ["-C", clone, "worktree", "add", "-b", branchName(issue), wt, head.trim()]);
   return wt;
 }
