@@ -163,6 +163,7 @@ export class Manager {
     await this.deps.setIssueLabels(repo, issue.number, ["in-progress"], ["ready"]);
     await this.deps.assignMe(repo, issue.number);
     await this.deps.commentOnIssue(repo, issue.number, `Workforce worker dispatched (model: ${state.model}).`);
+    await this.notify(state, `:rocket: Worker dispatched (model: ${state.model}).`);
     const result = await this.runWithQuota(state, {
       prompt: workerPrompt(repo, issue, branchName(issue.number)),
       cwd: worktree,

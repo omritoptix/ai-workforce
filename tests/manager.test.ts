@@ -69,6 +69,7 @@ it("drives a ready issue from dispatch to awaiting-final-review", async () => {
   expect(calls.labels[0]).toEqual({ add: ["in-progress"], remove: ["ready"] });
   expect(calls.run[0].prompt).toContain("do thing");
   expect(calls.run[1].prompt).toContain("/code-review");
+  expect(calls.slack.some((t) => t.includes("dispatched"))).toBe(true);
   expect(calls.slack.some((t) => t.includes("final review"))).toBe(true);
 });
 
