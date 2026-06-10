@@ -12,12 +12,14 @@ Every question you fail to ask now becomes a Slack interrupt or a wasted worker 
 ## Setup (every session)
 
 1. Determine repos in scope: read the `repos` list from `~/code/ai-workforce/config.json`.
-   If the file doesn't exist yet, ask Omri which repo this session targets.
-2. Ensure the label set exists in each repo in scope (idempotent, ignore "already exists"):
+   Local checkouts live at `~/code/<repo-name>`; clone if missing. If the config file
+   doesn't exist yet, ask Omri which repo this session targets.
+2. Ensure the label set exists in each repo in scope (idempotent — `--force` updates
+   existing labels and still surfaces real errors):
 
    ```bash
    for l in ready in-progress paused p0 p1 p2 model:opus model:sonnet model:haiku; do
-     gh label create "$l" --repo <repo> 2>/dev/null || true
+     gh label create "$l" --repo <repo> --force
    done
    ```
 
@@ -29,7 +31,8 @@ Every question you fail to ask now becomes a Slack interrupt or a wasted worker 
 
 ## Mode selection
 
-- Invoked with a topic → Mode A on that topic.
+- Invoked with a topic → Mode A on that topic (unless the topic is itself a triage
+  request → Mode B).
 - Invoked bare → ask Omri: new work (Mode A) or backlog triage (Mode B)?
 
 ## Mode A — feature intake
@@ -94,6 +97,9 @@ blocked-by: #N
 `blocked-by` lines are plain text in the body, same repo only, one per blocker; omit
 when there are none.
 
+Write each draft body to a file under `tmp/` — the publish step reads it with
+`--body-file`.
+
 ### 6. Cold-reader gate
 
 Before any `ready` label, dispatch a subagent with ONLY the draft issue body — zero
@@ -109,10 +115,14 @@ conversation context. Subagent prompt:
 > <issue body>
 
 For each material question that comes back: patch the body from conversation knowledge,
-or ask Omri if you don't know. Re-run the gate. Maximum 2 rounds — if questions remain
-after that, present them to Omri for a ship/hold call.
+or ask Omri if you don't know. Re-run the gate after patching. Maximum 2 gate runs
+total — if material questions remain after the second run, present them to Omri for a
+ship/hold call.
 
 ### 7. Publish
+
+Publish in dependency order — blockers first — so `blocked-by: #N` lines reference
+real issue numbers; fill numbers in as you create them.
 
 ```bash
 gh issue create --repo <repo> --title "<title>" --body-file <draft> \
@@ -121,7 +131,9 @@ gh issue edit <number> --repo <repo> --add-label "ready"
 ```
 
 Exactly one `p*` and one `model:*` label. Apply `ready` LAST and only after the gate
-passes — the manager dispatches the moment it sees it. Report the issue URLs to Omri.
+passes — the manager dispatches the moment it sees it. The manager honors `blocked-by`
+— it only dispatches issues whose blockers have merged — so label an entire dependency
+chain `ready` at once; dependents wait automatically. Report the issue URLs to Omri.
 
 ## Mode B — triage (on request only)
 
@@ -138,5 +150,5 @@ passes — the manager dispatches the moment it sees it. Report the issue URLs t
   alone — the cold-reader gate enforces this.
 - Scope each issue to a single PR. Split anything larger.
 - `ready` only after the gate passes.
-- Never `ready` an issue whose blockers are unsettled or whose decisions are still
-  open — keep discussing or leave it unlabeled.
+- Never `ready` an issue with open decisions — keep discussing or leave it unlabeled.
+  (Unmerged blockers are fine — the manager waits on `blocked-by`.)
