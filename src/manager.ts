@@ -81,21 +81,36 @@ export class Manager {
       }
       const status = state.status;
       if (status === "working") {
-        this.spawnDriver(key, async () => {
-          const result = await this.runWorker(
-            state,
-            "The manager restarted. Continue working on the issue per your original instructions and protocol.",
-          );
-          await this.handleSignals(state, result);
-        });
+        if (state.prNumber) {
+          this.spawnDriver(key, async () => {
+            await this.runWorker(state, "The manager restarted. Continue addressing the PR review feedback per your original instructions.");
+            await this.reviewPhase(state);
+          });
+        } else {
+          this.spawnDriver(key, async () => {
+            const result = await this.runWorker(
+              state,
+              "The manager restarted. Continue working on the issue per your original instructions and protocol.",
+            );
+            await this.handleSignals(state, result);
+          });
+        }
       } else if (status === "reviewing") {
         this.spawnDriver(key, () => this.reviewPhase(state));
       } else if (status === "awaiting-answer") {
-        this.spawnDriver(key, async () => {
-          const answer = await this.askOmri(state, state.lastQuestion ?? "(question lost on restart — resume the session to see it)");
-          const result = await this.runWorker(state, answerPrompt(answer));
-          await this.handleSignals(state, result);
-        });
+        if (state.prNumber) {
+          this.spawnDriver(key, async () => {
+            const answer = await this.askOmri(state, state.lastQuestion ?? "(question lost on restart — resume the session to see it)");
+            const result = await this.runWorker(state, answerPrompt(answer));
+            await this.reviewPhase(state);
+          });
+        } else {
+          this.spawnDriver(key, async () => {
+            const answer = await this.askOmri(state, state.lastQuestion ?? "(question lost on restart — resume the session to see it)");
+            const result = await this.runWorker(state, answerPrompt(answer));
+            await this.handleSignals(state, result);
+          });
+        }
       }
       // awaiting-final-review: watched by tick(); escalated: left for Omri.
     }

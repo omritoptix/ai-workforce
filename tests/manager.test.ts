@@ -153,3 +153,29 @@ it("flips an issue back to ready when the worker ends without a signal", async (
   await vi.waitFor(() => expect(store.get("o/r", 7)).toBeUndefined());
   expect(calls.labels.some((l) => l.add.includes("ready") && l.remove.includes("in-progress"))).toBe(true);
 });
+
+it("recover routes awaiting-answer+prNumber through reviewPhase not abort", async () => {
+  const { manager, store, calls } = harness([
+    ok("pushed fixes", "s2"),
+    ok("VERDICT: APPROVE", "r1"),
+  ]);
+  store.save({
+    repo: "o/r",
+    number: 7,
+    title: "do thing",
+    model: "sonnet",
+    priority: 1,
+    status: "awaiting-answer",
+    prNumber: 5,
+    sessionId: "s1",
+    reviewRounds: 0,
+    worktree: "/tmp/wt",
+    lastQuestion: "which db?",
+    slackThreadTs: "ts1",
+  });
+  await manager.recover();
+  // Wait until askOmri has posted the question to slack (waiter is registered)
+  await vi.waitFor(() => expect(calls.slack.some((t) => t.includes("which db?"))).toBe(true));
+  manager.onSlackReply(issueKey("o/r", 7), "use postgres");
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+});
