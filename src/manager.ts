@@ -106,6 +106,8 @@ export class Manager {
     fn()
       .catch(async (err) => {
         this.deps.log("error", "driver crashed", { key, err: String(err) });
+        // A crashed driver must not leave dispatch frozen for all new issues.
+        this.quotaExhausted = false;
         try {
           const [repo, num] = key.split("#");
           const state = this.store.get(repo, Number(num));
