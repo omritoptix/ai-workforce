@@ -33,6 +33,10 @@ export function issueKey(repo: string, n: number): string {
   return `${repo}#${n}`;
 }
 
+export function prLink(repo: string, n: number): string {
+  return `<https://github.com/${repo}/pull/${n}|PR #${n}>`;
+}
+
 export class Manager {
   private answerWaiters = new Map<string, (text: string) => void>();
   private driving = new Set<string>();
@@ -194,7 +198,7 @@ export class Manager {
       const pr = await this.deps.getPR(state.repo, state.prNumber!);
       if (!hasProofOfExecution(pr.body)) {
         if (proofRetried) {
-          await this.escalate(state, `PR #${state.prNumber} still has no Proof of execution section after a retry.`);
+          await this.escalate(state, `${prLink(state.repo, state.prNumber!)} still has no Proof of execution section after a retry.`);
           return;
         }
         proofRetried = true;
@@ -210,13 +214,13 @@ export class Manager {
       if (signal.kind === "verdict" && signal.approve) {
         state.status = "awaiting-final-review";
         this.store.save(state);
-        await this.notify(state, `<@${this.cfg.slackUserId}> :white_check_mark: PR #${state.prNumber} approved by reviewers — ready for your final review.`);
+        await this.notify(state, `<@${this.cfg.slackUserId}> :white_check_mark: ${prLink(state.repo, state.prNumber!)} approved by reviewers — ready for your final review.`);
         return;
       }
       state.reviewRounds++;
       this.store.save(state);
       if (state.reviewRounds >= this.cfg.maxReviewRounds) {
-        await this.escalate(state, `Review loop hit ${state.reviewRounds} rounds on PR #${state.prNumber} without approval.`);
+        await this.escalate(state, `Review loop hit ${state.reviewRounds} rounds on ${prLink(state.repo, state.prNumber!)} without approval.`);
         return;
       }
       await this.drainQuestions(state, fixPrompt(`Reviewers requested changes on PR #${state.prNumber}. Read the review comments with gh, address them, and push.`));
@@ -246,7 +250,7 @@ export class Manager {
       await this.deps.removeWorktree(state.repo, state.number);
       this.store.remove(state.repo, state.number);
       await this.deps.slackPost(
-        `:tada: PR #${state.prNumber} merged — ${issueKey(state.repo, state.number)} done.`,
+        `:tada: ${prLink(state.repo, state.prNumber!)} merged — ${issueKey(state.repo, state.number)} done.`,
         state.slackThreadTs,
       );
       this.deps.log("info", "issue completed", { key: issueKey(state.repo, state.number) });
