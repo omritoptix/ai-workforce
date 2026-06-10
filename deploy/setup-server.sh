@@ -14,11 +14,11 @@ sudo apt-get install -y nodejs
   && sudo apt-get update && sudo apt-get install -y gh
 sudo npm install -g @anthropic-ai/claude-code
 
-# auth (interactive) — gh first: both repos below are private
+# auth (interactive) — gh first: the config repo below is private
 gh auth login
 
 # config (must come before setup-token, which writes credentials into ~/.claude)
-gh repo clone omritoptix/claude-config ~/.claude
+gh repo clone omritoptix/claude-setup ~/.claude
 claude setup-token   # authenticates Claude Code against the Max subscription
 
 # code

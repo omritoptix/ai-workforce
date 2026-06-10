@@ -51,5 +51,5 @@ Without this, the first dispatch fails on `--add-label`.
 ## Server
 
 See `deploy/setup-server.sh`. Skills/config sync: the server's `~/.claude` is a clone of
-the private `claude-config` repo and is pulled before every session spawn — push a skill
+the private `claude-setup` repo and is pulled before every session spawn — push a skill
 from the laptop and the next dispatched agent uses it.
