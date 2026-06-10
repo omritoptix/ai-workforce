@@ -70,7 +70,13 @@ export class Manager {
     for (const state of this.store.list()) {
       const key = issueKey(state.repo, state.number);
       if (state.slackThreadTs) this.deps.slackRegister(state.slackThreadTs, key);
-      const status = state.status === "paused" ? state.pausedFrom! : state.status;
+      if (state.status === "paused") {
+        state.status = state.pausedFrom!;
+        delete state.pausedFrom;
+        this.store.save(state);
+        await this.deps.setIssueLabels(state.repo, state.number, [], ["paused"]);
+      }
+      const status = state.status;
       if (status === "working") {
         this.spawnDriver(key, async () => {
           const result = await this.runWorker(

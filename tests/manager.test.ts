@@ -99,6 +99,29 @@ it("pauses on quota and retries", async () => {
   expect(calls.labels.some((l) => l.remove.includes("paused"))).toBe(true);
 });
 
+it("normalizes paused state on recover and resumes the underlying phase", async () => {
+  const { manager, store, calls } = harness([
+    ok("done\nPR: https://github.com/o/r/pull/5", "s2"),
+    ok("VERDICT: APPROVE", "r1"),
+  ]);
+  store.save({
+    repo: "o/r",
+    number: 7,
+    title: "do thing",
+    model: "sonnet",
+    priority: 1,
+    status: "paused",
+    pausedFrom: "working",
+    sessionId: "s1",
+    reviewRounds: 0,
+    worktree: "/tmp/wt",
+  });
+  await manager.recover();
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+  expect(calls.labels.some((l) => l.remove.includes("paused"))).toBe(true);
+  expect(store.get("o/r", 7)?.pausedFrom).toBeUndefined();
+});
+
 it("flips an issue back to ready when the worker ends without a signal", async () => {
   const { manager, store, calls } = harness([ok("I crashed and burned")]);
   await manager.tick();
