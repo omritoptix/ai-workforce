@@ -20,11 +20,19 @@ it("builds a worker prompt with spec, branch, closes-line and protocol", () => {
 });
 
 it("builds a reviewer prompt with the verdict protocol", () => {
-  const p = reviewerPrompt("o/r", 42);
+  const p = reviewerPrompt("o/r", 42, 0);
   expect(p).toContain("/code-review");
   expect(p).toContain("Proof of execution");
   expect(p).toContain("VERDICT: APPROVE");
   expect(p).toContain("VERDICT: REQUEST_CHANGES");
+  expect(p).toContain("EXACTLY ONE");
+  expect(p).not.toContain("re-review");
+});
+
+it("reviewer prompt round > 0 is delta-only", () => {
+  const p = reviewerPrompt("o/r", 42, 1);
+  expect(p).toContain("re-review round 2");
+  expect(p).toContain("ONLY on the delta");
 });
 
 it("answer and fix prompts restate the protocol", () => {

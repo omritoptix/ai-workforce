@@ -212,7 +212,7 @@ export class Manager {
         continue;
       }
       const review = await this.runWithQuota(state, {
-        prompt: reviewerPrompt(state.repo, state.prNumber!),
+        prompt: reviewerPrompt(state.repo, state.prNumber!, state.reviewRounds),
         cwd: state.worktree!,
         model: "sonnet",
       });

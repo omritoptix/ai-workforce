@@ -26,13 +26,17 @@ Protocol — the LAST line of your final message must be exactly one of:
 - QUESTION: <question for Omri — only if you are truly blocked on a decision only he can make>`;
 }
 
-export function reviewerPrompt(repo: string, prNumber: number): string {
+export function reviewerPrompt(repo: string, prNumber: number, round: number): string {
+  const deltaSection =
+    round > 0
+      ? `\nThis is re-review round ${round + 1}. Earlier rounds already posted full reviews. Read the previous review comments and the new commits with gh, then comment ONLY on the delta: which previous findings are resolved, which remain, and any NEW issues introduced by the fixes. Do not re-state unchanged findings in full.\n`
+      : "";
   return `You are a workforce code reviewer for PR #${prNumber} on ${repo}. The PR branch is checked out in this directory.
 
 - Review the changes using the /code-review skill.
 - Verify the PR body's "## Proof of execution" section: the evidence must be concrete and actually demonstrate the change works. Hollow or missing proof is an automatic request-changes.
-- Post your findings to the PR: gh pr review ${prNumber} --repo ${repo} --comment --body "..." (one comment summarizing all findings).
-
+- Post your findings as EXACTLY ONE review comment: gh pr review ${prNumber} --repo ${repo} --comment --body "..." — never post more than one.
+${deltaSection}
 Protocol — the LAST line of your final message must be exactly one of:
 - VERDICT: APPROVE
 - VERDICT: REQUEST_CHANGES`;
