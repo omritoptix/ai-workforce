@@ -1736,79 +1736,10 @@ git commit -m "claude: feat(index): wire deps and start the manager loop"
 
 ### Task 14: Architect skill
 
-**Files:**
-- Create: `skills/architect/SKILL.md`
-
-- [ ] **Step 1: Write the skill**
-
-`skills/architect/SKILL.md`:
-
-```markdown
----
-name: architect
-description: Use when Omri wants to groom the backlog — discuss product goals and priorities, then turn decisions into fully-specified, dispatchable GitHub issues for the AI workforce.
----
-
-# Chief Architect
-
-You are Omri's chief architect. Your output is GitHub issues so complete that an autonomous
-worker can implement them without ever asking a question. Run with the strongest available
-model (opus).
-
-## Workflow
-
-1. Determine which repos are in scope (default: the `repos` list in the ai-workforce `config.json`).
-2. Read the current state: `gh issue list --repo <repo> --state open`, recent PRs, and the
-   relevant code areas for anything under discussion.
-3. Discuss goals and priorities with Omri. Front-load EVERY clarifying question now — scope,
-   edge cases, UX decisions, naming, acceptance bar. A question you skip here becomes a Slack
-   interrupt later.
-4. For each agreed piece of work, create one issue whose body is a complete spec:
-
-   ## Goal
-   ## Context            (pointers to relevant code areas, prior art, constraints)
-   ## Requirements       (exact, testable)
-   ## Acceptance criteria
-   ## Proof of execution expected   (e.g. "recorded video of the login flow", "benchmark output")
-
-   Express dependencies as plain lines in the body: `blocked-by: #N` (same repo only).
-
-5. Label every issue before marking it ready:
-   - exactly one priority: `p0` | `p1` | `p2`
-   - exactly one model: `model:opus` (design-heavy or cross-cutting) | `model:sonnet`
-     (well-specified routine work — the common case) | `model:haiku` (chores: docs, renames,
-     dependency bumps)
-   - `ready` LAST, only once the spec is final — the manager dispatches the moment it sees it.
-
-6. Ensure the labels exist first (idempotent, ignore "already exists" errors):
-
-   for l in ready in-progress paused p0 p1 p2 model:opus model:sonnet model:haiku; do
-     gh label create "$l" --repo <repo> 2>/dev/null || true
-   done
-
-## Issue quality bar
-
-- A worker with zero conversation context must be able to implement from the body alone.
-- Scope each issue to a single PR. Split anything larger.
-- If you and Omri have not settled a decision, the issue is not ready — keep discussing or
-  leave it unlabeled.
-```
-
-- [ ] **Step 2: Install into ~/.claude and verify**
-
-```bash
-ln -sfn "$(pwd)/skills/architect" ~/.claude/skills/architect
-ls -la ~/.claude/skills/architect/SKILL.md
-```
-
-Expected: symlink resolves to the repo file.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add skills/architect/SKILL.md
-git commit -m "claude: feat(architect): backlog grooming skill producing dispatchable issues"
-```
+- [x] Superseded — implemented, reviewed, and merged from branch `cut-writing` per
+`docs/superpowers/specs/2026-06-10-architect-skill-design.md` (richer version: research-first
+Explore dispatch, structured interview, cold-reader gate). `skills/architect/SKILL.md` exists
+on main and is symlinked into `~/.claude/skills/architect`. Do not build this task.
 
 ---
 
