@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { execa } from "execa";
@@ -13,6 +14,7 @@ import * as wt from "./worktree.js";
 const configPath = process.argv[2];
 if (!configPath) throw new Error("usage: tsx src/index.ts <config.json>");
 const cfg = loadConfig(configPath);
+mkdirSync(cfg.workDir, { recursive: true });
 
 const logger = pino(destination(join(cfg.workDir, "manager.log")));
 const log: Deps["log"] = (level, msg, fields = {}) => logger[level](fields, msg);
