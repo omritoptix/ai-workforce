@@ -7,7 +7,6 @@ const issue: GhIssue = {
   title: "Add login",
   body: "## Goal\nLogin flow",
   labels: ["ready", "model:sonnet"],
-  assignees: [],
 };
 
 it("builds a worker prompt with spec, branch, closes-line and protocol", () => {

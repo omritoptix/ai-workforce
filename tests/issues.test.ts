@@ -2,7 +2,7 @@ import { it, expect } from "vitest";
 import { GhIssue, blockedBy, isDispatchable, modelLabel, priorityLabel } from "../src/issues.js";
 
 function issue(over: Partial<GhIssue>): GhIssue {
-  return { number: 1, title: "t", body: "", labels: [], assignees: [], ...over };
+  return { number: 1, title: "t", body: "", labels: [], ...over };
 }
 
 it("extracts the model label", () => {

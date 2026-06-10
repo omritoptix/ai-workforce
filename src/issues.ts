@@ -3,7 +3,6 @@ export interface GhIssue {
   title: string;
   body: string;
   labels: string[];
-  assignees: string[];
 }
 
 export function modelLabel(labels: string[]): string | undefined {

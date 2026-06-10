@@ -9,28 +9,23 @@ async function gh(args: string[]): Promise<string> {
 interface RawLabel {
   name: string;
 }
-interface RawUser {
-  login: string;
-}
 interface RawIssue {
   number: number;
   title: string;
   body: string | null;
   labels: RawLabel[];
-  assignees: RawUser[];
 }
 
 export async function listOpenIssues(repo: string): Promise<GhIssue[]> {
   const out = await gh([
     "issue", "list", "--repo", repo, "--state", "open", "--limit", "200",
-    "--json", "number,title,body,labels,assignees",
+    "--json", "number,title,body,labels",
   ]);
   return (JSON.parse(out) as RawIssue[]).map((i) => ({
     number: i.number,
     title: i.title,
     body: i.body ?? "",
     labels: i.labels.map((l) => l.name),
-    assignees: i.assignees.map((a) => a.login),
   }));
 }
 

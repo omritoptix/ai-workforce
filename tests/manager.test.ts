@@ -24,7 +24,6 @@ const readyIssue: GhIssue = {
   title: "do thing",
   body: "spec",
   labels: ["ready", "model:sonnet", "p1"],
-  assignees: [],
 };
 
 function ok(text: string, sessionId = "s1"): SessionResult {
