@@ -178,10 +178,7 @@ export class Manager {
           return;
         }
         proofRetried = true;
-        await this.runWorker(
-          state,
-          fixPrompt("The PR body is missing a non-empty '## Proof of execution' section. Produce the evidence and update the PR body with gh pr edit."),
-        );
+        await this.runFix(state, "The PR body is missing a non-empty '## Proof of execution' section. Produce the evidence and update the PR body with gh pr edit.");
         continue;
       }
       const review = await this.runWithQuota(state, {
@@ -202,11 +199,21 @@ export class Manager {
         await this.escalate(state, `Review loop hit ${state.reviewRounds} rounds on PR #${state.prNumber} without approval.`);
         return;
       }
-      await this.runWorker(
-        state,
-        fixPrompt(`Reviewers requested changes on PR #${state.prNumber}. Read the review comments with gh, address them, and push.`),
-      );
+      await this.runFix(state, `Reviewers requested changes on PR #${state.prNumber}. Read the review comments with gh, address them, and push.`);
     }
+  }
+
+  private async runFix(state: IssueState, instruction: string): Promise<void> {
+    let result = await this.runWorker(state, fixPrompt(instruction));
+    let signal = parseSignal(result.text);
+    while (signal.kind === "question") {
+      const answer = await this.askOmri(state, signal.text);
+      result = await this.runWorker(state, answerPrompt(answer));
+      signal = parseSignal(result.text);
+    }
+    // askOmri leaves status as "working"; we are still mid-review.
+    state.status = "reviewing";
+    this.store.save(state);
   }
 
   private async watchMerges(): Promise<void> {
