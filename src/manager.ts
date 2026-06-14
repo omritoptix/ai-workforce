@@ -20,6 +20,7 @@ export interface Deps {
   commentOnIssue(repo: string, n: number, body: string): Promise<void>;
   assignMe(repo: string, n: number): Promise<void>;
   getPR(repo: string, n: number): Promise<{ body: string; mergedAt: string | null }>;
+  listIssueComments(repo: string, n: number): Promise<{ body: string; createdAt: string }[]>;
   markReadyForReview(repo: string, n: number): Promise<void>;
   createWorktree(repo: string, issue: number): Promise<string>;
   removeWorktree(repo: string, issue: number): Promise<void>;
@@ -42,6 +43,7 @@ export class Manager {
   private answerWaiters = new Map<string, (text: string) => void>();
   private driving = new Set<string>();
   private quotaExhausted = false;
+  private pendingGuidance = new Map<string, string[]>();
 
   constructor(
     private cfg: Config,
@@ -71,7 +73,46 @@ export class Manager {
         }
       }
     }
+    await this.pollComments();
     await this.watchMerges();
+  }
+
+  private async pollComments(): Promise<void> {
+    for (const state of this.store.list()) {
+      try {
+        const comments = await this.deps.listIssueComments(state.repo, state.number);
+        const since = state.lastCommentTs ?? "";
+        const fresh = comments
+          .filter((c) => c.createdAt > since)
+          .filter((c) => c.body.trim().toLowerCase().startsWith("/workforce"));
+        if (comments.length) {
+          // advance the watermark to the newest comment seen (re-read fresh to limit races)
+          const latest = comments.reduce((m, c) => (c.createdAt > m ? c.createdAt : m), since);
+          const cur = this.store.get(state.repo, state.number);
+          if (cur) {
+            cur.lastCommentTs = latest;
+            this.store.save(cur);
+          }
+        }
+        for (const c of fresh) {
+          const text = c.body.trim().slice("/workforce".length).trim();
+          if (!text) continue;
+          const key = issueKey(state.repo, state.number);
+          const cur = this.store.get(state.repo, state.number);
+          if (cur?.status === "awaiting-answer" && this.answerWaiters.has(key)) {
+            this.deps.log("info", "guidance via issue comment answered a question", { key });
+            this.onSlackReply(key, text);
+          } else {
+            const q = this.pendingGuidance.get(key) ?? [];
+            q.push(text);
+            this.pendingGuidance.set(key, q);
+            this.deps.log("info", "guidance via issue comment queued", { key });
+          }
+        }
+      } catch (err) {
+        this.deps.log("error", "comment poll failed", { repo: state.repo, number: state.number, err: String(err) });
+      }
+    }
   }
 
   async recover(): Promise<void> {
@@ -159,6 +200,7 @@ export class Manager {
       status: "working",
       reviewRounds: 0,
       worktree,
+      lastCommentTs: new Date().toISOString(),
     };
     this.store.save(state);
     await this.deps.setIssueLabels(repo, issue.number, ["in-progress"], ["ready"]);
@@ -266,6 +308,12 @@ export class Manager {
   }
 
   private async runWorker(state: IssueState, prompt: string): Promise<SessionResult> {
+    const key = issueKey(state.repo, state.number);
+    const queued = this.pendingGuidance.get(key);
+    if (queued?.length) {
+      prompt = `Additional guidance from Omri (incorporate this):\n${queued.map((g) => "- " + g).join("\n")}\n\n${prompt}`;
+      this.pendingGuidance.delete(key);
+    }
     const result = await this.runWithQuota(state, {
       prompt,
       cwd: state.worktree!,

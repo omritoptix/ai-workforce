@@ -23,6 +23,7 @@ export interface IssueState {
   slackThreadTs?: string;
   worktree?: string;
   lastQuestion?: string;
+  lastCommentTs?: string;
 }
 
 export class StateStore {

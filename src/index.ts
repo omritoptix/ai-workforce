@@ -29,6 +29,7 @@ const deps: Deps = {
   commentOnIssue: github.commentOnIssue,
   assignMe: github.assignMe,
   getPR: github.getPR,
+  listIssueComments: github.listIssueComments,
   markReadyForReview: github.markReadyForReview,
   createWorktree: (repo, issue) => wt.createWorktree(cfg.workDir, repo, issue),
   removeWorktree: (repo, issue) => wt.removeWorktree(cfg.workDir, repo, issue),

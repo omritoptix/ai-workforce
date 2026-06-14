@@ -44,6 +44,7 @@ function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue], 
     commentOnIssue: async () => {},
     assignMe: async () => {},
     getPR: async () => ({ body: "## Proof of execution\n12 tests passed", mergedAt: null }),
+    listIssueComments: async () => [],
     markReadyForReview: async (_r, n) => {
       calls.readied.push(n);
     },
@@ -246,6 +247,57 @@ it("cleans up when an awaiting-final-review PR is merged", async () => {
   await h.manager.tick();
   expect(h.store.get("o/r", 7)).toBeUndefined();
   expect(h.calls.slack.some((t) => t.includes("merged"))).toBe(true);
+});
+
+it("answers a parked question via an issue comment", async () => {
+  const h = harness([
+    ok("QUESTION: which database?"),
+    ok("done\nPR: https://github.com/o/r/pull/5", "s2"),
+    ok("VERDICT: APPROVE", "s3"),
+  ]);
+  await h.manager.tick();
+  await vi.waitFor(() => expect(h.store.get("o/r", 7)?.status).toBe("awaiting-answer"));
+  h.deps.listIssueComments = async () => [
+    { body: "/workforce use postgres", createdAt: "2999-01-01T00:00:00Z" },
+  ];
+  await h.manager.tick();
+  await vi.waitFor(() => expect(h.store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+  expect(h.calls.run[1].prompt).toContain("use postgres");
+});
+
+it("does not reprocess the same comment twice", async () => {
+  const h = harness([], []);
+  h.store.save({
+    repo: "o/r",
+    number: 7,
+    title: "do thing",
+    model: "sonnet",
+    priority: 1,
+    status: "reviewing",
+    prNumber: 5,
+    sessionId: "s1",
+    reviewRounds: 0,
+    worktree: "/tmp/wt",
+    lastCommentTs: "2000-01-01T00:00:00Z",
+  });
+  h.deps.listIssueComments = async () => [
+    { body: "/workforce do X", createdAt: "2999-01-01T00:00:00Z" },
+  ];
+  await h.manager.tick();
+  await h.manager.tick();
+  // The watermark advanced after the first tick, so the second tick sees nothing.
+  // Drive a worker session and assert the guidance appears exactly once.
+  h.deps.run = async (o) => {
+    h.calls.run.push(o);
+    return ok("VERDICT: APPROVE");
+  };
+  const state = h.store.get("o/r", 7)!;
+  await (h.manager as unknown as { runWorker(s: typeof state, p: string): Promise<unknown> }).runWorker(
+    state,
+    "base prompt",
+  );
+  const prompt = h.calls.run[0].prompt;
+  expect(prompt.match(/do X/g)?.length).toBe(1);
 });
 
 it("recovers an awaiting-answer issue by re-posting the question", async () => {

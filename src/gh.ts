@@ -63,3 +63,12 @@ export async function getPR(
   const pr = JSON.parse(out) as { body: string | null; mergedAt: string | null };
   return { body: pr.body ?? "", mergedAt: pr.mergedAt ?? null };
 }
+
+export async function listIssueComments(
+  repo: string,
+  number: number,
+): Promise<{ body: string; createdAt: string }[]> {
+  const out = await gh(["issue", "view", String(number), "--repo", repo, "--json", "comments"]);
+  const j = JSON.parse(out) as { comments: { body: string; createdAt: string }[] };
+  return j.comments ?? [];
+}
