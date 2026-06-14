@@ -32,3 +32,8 @@ it("dispatches only ready issues with a model label and no open blockers", () =>
     isDispatchable(issue({ labels: ["ready", "model:sonnet"], body: "blocked-by: #99" }), open),
   ).toBe(true);
 });
+
+it("does not require a model label when requireModel is false", () => {
+  expect(isDispatchable(issue({ labels: ["ready"] }), new Set(), false)).toBe(true);
+  expect(isDispatchable(issue({ labels: ["ready"] }), new Set())).toBe(false);
+});

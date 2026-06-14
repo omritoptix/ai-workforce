@@ -65,7 +65,7 @@ export class Manager {
         for (const issue of issues) {
           const key = issueKey(repo, issue.number);
           if (this.driving.has(key) || this.store.get(repo, issue.number)) continue;
-          if (!isDispatchable(issue, open)) continue;
+          if (!isDispatchable(issue, open, !this.cfg.forceModel)) continue;
           this.spawnDriver(key, () => this.driveNew(repo, issue));
         }
       }
@@ -153,7 +153,7 @@ export class Manager {
       repo,
       number: issue.number,
       title: issue.title,
-      model: modelLabel(issue.labels)!,
+      model: this.cfg.forceModel ?? modelLabel(issue.labels)!,
       priority: priorityLabel(issue.labels),
       status: "working",
       reviewRounds: 0,
@@ -214,7 +214,7 @@ export class Manager {
       const review = await this.runWithQuota(state, {
         prompt: reviewerPrompt(state.repo, state.prNumber!, state.reviewRounds),
         cwd: state.worktree!,
-        model: "sonnet",
+        model: this.cfg.forceModel ?? "sonnet",
       });
       const signal = parseSignal(review.text);
       if (signal.kind === "verdict" && signal.approve) {

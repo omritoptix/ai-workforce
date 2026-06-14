@@ -18,8 +18,8 @@ export function blockedBy(body: string): number[] {
   return [...body.matchAll(/^blocked-by:\s*#(\d+)/gim)].map((m) => Number(m[1]));
 }
 
-export function isDispatchable(issue: GhIssue, openNumbers: Set<number>): boolean {
+export function isDispatchable(issue: GhIssue, openNumbers: Set<number>, requireModel = true): boolean {
   if (!issue.labels.includes("ready")) return false;
-  if (modelLabel(issue.labels) === undefined) return false;
+  if (requireModel && modelLabel(issue.labels) === undefined) return false;
   return blockedBy(issue.body).every((n) => !openNumbers.has(n));
 }

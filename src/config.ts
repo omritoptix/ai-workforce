@@ -9,6 +9,7 @@ export interface Config {
   maxReviewRounds: number;
   sessionTimeoutMs: number;
   quotaRetryMs: number;
+  forceModel?: string;
 }
 
 const KEYS: (keyof Config)[] = [

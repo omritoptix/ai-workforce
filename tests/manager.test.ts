@@ -30,7 +30,7 @@ function ok(text: string, sessionId = "s1"): SessionResult {
   return { sessionId, text, quotaHit: false, failed: false };
 }
 
-function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue]) {
+function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue], cfgOverride: Config = cfg) {
   const calls = { run: [] as RunOpts[], labels: [] as { add: string[]; remove: string[] }[], slack: [] as string[] };
   const deps: Deps = {
     run: async (o) => {
@@ -56,7 +56,7 @@ function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue]) 
     log: () => {},
   };
   const store = new StateStore(mkdtempSync(join(tmpdir(), "wf-mgr-")));
-  return { manager: new Manager(cfg, store, deps), store, calls, deps };
+  return { manager: new Manager(cfgOverride, store, deps), store, calls, deps };
 }
 
 it("drives a ready issue from dispatch to awaiting-final-review", async () => {
@@ -71,6 +71,18 @@ it("drives a ready issue from dispatch to awaiting-final-review", async () => {
   expect(calls.run[1].prompt).toContain("/code-review");
   expect(calls.slack.some((t) => t.includes("dispatched"))).toBe(true);
   expect(calls.slack.some((t) => t.includes("final review"))).toBe(true);
+});
+
+it("forceModel overrides the issue model label for worker and reviewer", async () => {
+  const { manager, store, calls } = harness(
+    [ok("done\nPR: https://github.com/o/r/pull/5"), ok("VERDICT: APPROVE", "s2")],
+    [{ ...readyIssue, labels: ["ready", "model:haiku"] }],
+    { ...cfg, forceModel: "opus" },
+  );
+  await manager.tick();
+  await vi.waitFor(() => expect(store.get("o/r", 7)?.status).toBe("awaiting-final-review"));
+  expect(calls.run[0].model).toBe("opus");
+  expect(calls.run[1].model).toBe("opus");
 });
 
 it("relays questions through slack and resumes with the answer", async () => {

@@ -29,3 +29,11 @@ it("throws on a missing key", () => {
   const { quotaRetryMs: _, ...incomplete } = valid;
   expect(() => loadConfig(writeTmp(incomplete))).toThrow("quotaRetryMs");
 });
+
+it("loads without forceModel, leaving it undefined", () => {
+  expect(loadConfig(writeTmp(valid)).forceModel).toBeUndefined();
+});
+
+it("exposes forceModel when set", () => {
+  expect(loadConfig(writeTmp({ ...valid, forceModel: "opus" })).forceModel).toBe("opus");
+});
