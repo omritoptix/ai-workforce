@@ -31,7 +31,7 @@ function ok(text: string, sessionId = "s1"): SessionResult {
 }
 
 function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue], cfgOverride: Config = cfg) {
-  const calls = { run: [] as RunOpts[], labels: [] as { add: string[]; remove: string[] }[], slack: [] as string[] };
+  const calls = { run: [] as RunOpts[], labels: [] as { add: string[]; remove: string[] }[], slack: [] as string[], readied: [] as number[] };
   const deps: Deps = {
     run: async (o) => {
       calls.run.push(o);
@@ -44,6 +44,9 @@ function harness(runResults: SessionResult[], issues: GhIssue[] = [readyIssue], 
     commentOnIssue: async () => {},
     assignMe: async () => {},
     getPR: async () => ({ body: "## Proof of execution\n12 tests passed", mergedAt: null }),
+    markReadyForReview: async (_r, n) => {
+      calls.readied.push(n);
+    },
     createWorktree: async () => "/tmp/wt",
     removeWorktree: async () => {},
     syncSkills: async () => {},
@@ -71,6 +74,7 @@ it("drives a ready issue from dispatch to awaiting-final-review", async () => {
   expect(calls.run[1].prompt).toContain("/code-review");
   expect(calls.slack.some((t) => t.includes("dispatched"))).toBe(true);
   expect(calls.slack.some((t) => t.includes("final review"))).toBe(true);
+  expect(calls.readied).toContain(5);
 });
 
 it("forceModel overrides the issue model label for worker and reviewer", async () => {

@@ -18,7 +18,8 @@ Rules:
 - Follow repository conventions; run formatters, linters and tests before finishing.
 - You MUST produce proof of execution using the available verification skills (recorded UI flows for frontend, test/benchmark output for backend).
 - Commit using conventional commits prefixed "claude:".
-- Push the branch and open a PR: gh pr create --repo ${repo} --title "..." --body "..."
+- Push the branch and open the PR as a DRAFT: gh pr create --draft --repo ${repo} --title "..." --body "..."
+  Open it as a draft on purpose — the workforce reviewers will mark it "ready for review" once they approve. Do not mark it ready yourself.
   The PR body MUST contain the line "Closes #${issue.number}" and a "## Proof of execution" section with concrete evidence.
 
 Protocol — the LAST line of your final message must be exactly one of:

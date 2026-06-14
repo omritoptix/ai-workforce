@@ -20,6 +20,7 @@ export interface Deps {
   commentOnIssue(repo: string, n: number, body: string): Promise<void>;
   assignMe(repo: string, n: number): Promise<void>;
   getPR(repo: string, n: number): Promise<{ body: string; mergedAt: string | null }>;
+  markReadyForReview(repo: string, n: number): Promise<void>;
   createWorktree(repo: string, issue: number): Promise<string>;
   removeWorktree(repo: string, issue: number): Promise<void>;
   syncSkills(): Promise<void>;
@@ -218,6 +219,7 @@ export class Manager {
       });
       const signal = parseSignal(review.text);
       if (signal.kind === "verdict" && signal.approve) {
+        await this.deps.markReadyForReview(state.repo, state.prNumber!);
         state.status = "awaiting-final-review";
         this.store.save(state);
         await this.notify(state, `<@${this.cfg.slackUserId}> :white_check_mark: ${prLink(state.repo, state.prNumber!)} approved by reviewers — ready for your final review.`);

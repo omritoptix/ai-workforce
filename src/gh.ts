@@ -50,6 +50,11 @@ export async function assignMe(repo: string, number: number): Promise<void> {
   await gh(["issue", "edit", String(number), "--repo", repo, "--add-assignee", "@me"]);
 }
 
+export async function markReadyForReview(repo: string, number: number): Promise<void> {
+  // `gh pr ready` errors if the PR is already ready; that's benign on re-entry, so swallow it.
+  await gh(["pr", "ready", String(number), "--repo", repo]).catch(() => {});
+}
+
 export async function getPR(
   repo: string,
   number: number,

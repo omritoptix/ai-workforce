@@ -14,6 +14,7 @@ it("builds a worker prompt with spec, branch, closes-line and protocol", () => {
   expect(p).toContain("## Goal\nLogin flow");
   expect(p).toContain("omridagan/claude-issue-9");
   expect(p).toContain("Closes #9");
+  expect(p).toContain("--draft");
   expect(p).toContain("## Proof of execution");
   expect(p).toContain("PR: <");
   expect(p).toContain("QUESTION: <");
